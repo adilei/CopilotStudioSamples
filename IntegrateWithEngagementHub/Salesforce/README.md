@@ -50,8 +50,10 @@ The deployment script (`deploy.sh` / `deploy.ps1`) performs these steps:
 2. **Deploys Remote Site Setting** - Enables callouts to `https://directline.botframework.com`
 3. **Deploys External Credential** - Creates the `Directline` External Credential with Custom auth protocol and Authorization header formula
 4. **Deploys Named Credential** - Creates the `Directline` Named Credential pointing to `https://directline.botframework.com`
-5. **Grants Apex Permissions** - Adds the three Apex classes to the `sfdc_chatbot_service_permset` permission set so Einstein Bot can invoke them
+5. **Grants Apex Permissions** - Adds the three Apex classes to the Chatbot permission set so Einstein Bot can invoke them
 6. **Grants Credential Access** - Adds the `Directline_Principal` to the Chatbot permission set's External Credential Principal Access
+
+> **Note:** The Einstein Bot permission set API name is `sfdc_chatbot_service_permset` (labeled "Chatbot" in Setup). This permission set is automatically created when Einstein Bots is enabled in your org.
 
 ## Manual Configuration Required
 
