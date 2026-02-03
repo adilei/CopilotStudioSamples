@@ -12,7 +12,7 @@ This folder contains sample code for integrating Microsoft Copilot Studio with S
 | **Remote Site Setting** | Allows Salesforce to call directline.botframework.com | [`Metadata/remoteSiteSettings/DirectLine.remoteSite-meta.xml`](./Metadata/remoteSiteSettings/DirectLine.remoteSite-meta.xml) |
 | **External Credential** | Stores authentication config with Custom auth protocol | [`Metadata/externalCredentials/Directline.externalCredential-meta.xml`](./Metadata/externalCredentials/Directline.externalCredential-meta.xml) |
 | **Named Credential** | Endpoint configuration for DirectLine API | [`Metadata/namedCredentials/Directline.namedCredential-meta.xml`](./Metadata/namedCredentials/Directline.namedCredential-meta.xml) |
-| **Deploy Script** | Automated deployment script | [`scripts/deploy.sh`](./scripts/deploy.sh) (Unix) / [`scripts/deploy.ps1`](./scripts/deploy.ps1) (Windows) |
+| **Deploy Script** | Automated deployment script | [`scripts/deploy.sh`](./scripts/deploy.sh) (macOS/Linux) / [`scripts/deploy.ps1`](./scripts/deploy.ps1) (Windows) |
 
 These samples are companion code for the official documentation at: [Microsoft Learn - Copilot Studio with Salesforce](https://learn.microsoft.com/en-us/microsoft-copilot-studio/customer-copilot-salesforce-handoff)
 
@@ -31,7 +31,7 @@ These samples are companion code for the official documentation at: [Microsoft L
 
 2. Run the deployment script:
    ```bash
-   # Unix/macOS
+   # macOS/Linux
    ./scripts/deploy.sh
 
    # Windows PowerShell
