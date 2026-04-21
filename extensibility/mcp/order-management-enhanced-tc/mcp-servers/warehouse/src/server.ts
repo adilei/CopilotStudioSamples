@@ -201,28 +201,6 @@ export function createServer(port: number): void {
   app.use(express.json());
 
   app.post("/mcp", async (req: Request, res: Response) => {
-    const body = req.body;
-    const method = Array.isArray(body) ? body.map((m: any) => m.method).join(", ") : body.method;
-    console.log(`[MCP] → ${method}`);
-    console.log(`[MCP]   headers: accept=${req.header("accept")}`);
-    console.log(`[MCP]   body: ${JSON.stringify(body).slice(0, 300)}`);
-
-    // Intercept response to log what goes back
-    const origWrite = res.write.bind(res);
-    const origEnd = res.end.bind(res);
-    res.write = function (chunk: any, ...args: any[]) {
-      console.log(`[MCP] ← write: ${typeof chunk === "string" ? chunk.slice(0, 300) : Buffer.from(chunk).toString().slice(0, 300)}`);
-      return (origWrite as any)(chunk, ...args);
-    };
-    const origEndFn = res.end;
-    res.end = function (chunk: any, ...args: any[]) {
-      if (chunk) {
-        console.log(`[MCP] ← end: ${typeof chunk === "string" ? chunk.slice(0, 300) : Buffer.from(chunk).toString().slice(0, 300)}`);
-      }
-      console.log(`[MCP] ← status: ${res.statusCode}, content-type: ${res.getHeader("content-type")}`);
-      return (origEndFn as any).call(res, chunk, ...args);
-    };
-
     const server = createMcpServer();
     const transport = new StreamableHTTPServerTransport({
       sessionIdGenerator: undefined,
