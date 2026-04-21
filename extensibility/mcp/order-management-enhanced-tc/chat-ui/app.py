@@ -438,41 +438,41 @@ def chat(user_message: str, history: list):
 
 theme = gr.themes.Base(
     primary_hue=gr.themes.Color(
-        c50="#f0f7ff", c100="#dfeeff", c200="#b8daff", c300="#85bfff",
-        c400="#4d9bff", c500="#1a73e8", c600="#1557b0", c700="#104390",
-        c800="#0d3370", c900="#0a2550", c950="#061838",
+        c50="#f0f9f6", c100="#d5f0e8", c200="#a8e0cf", c300="#6ec9b0",
+        c400="#3bab8e", c500="#1e8c6e", c600="#187058", c700="#145845",
+        c800="#104437", c900="#0c332a", c950="#06201a",
     ),
     secondary_hue=gr.themes.Color(
-        c50="#f5f3ff", c100="#ede9fe", c200="#ddd6fe", c300="#c4b5fd",
-        c400="#a78bfa", c500="#8b5cf6", c600="#7c3aed", c700="#6d28d9",
-        c800="#5b21b6", c900="#4c1d95", c950="#2e1065",
+        c50="#fef7ee", c100="#fdedd3", c200="#f9d7a5", c300="#f4bb6d",
+        c400="#ef9a33", c500="#e8801b", c600="#cf6612", c700="#ab4e12",
+        c800="#893f16", c900="#713615", c950="#3d1a09",
     ),
     neutral_hue=gr.themes.Color(
-        c50="#fafaf9", c100="#f5f5f4", c200="#e7e5e4", c300="#d6d3d1",
-        c400="#a8a29e", c500="#78716c", c600="#57534e", c700="#44403c",
-        c800="#292524", c900="#1c1917", c950="#0c0a09",
+        c50="#f8f9fa", c100="#f1f3f5", c200="#e5e7eb", c300="#d1d5db",
+        c400="#9ca3af", c500="#6b7280", c600="#4b5563", c700="#374151",
+        c800="#1f2937", c900="#111827", c950="#030712",
     ),
-    font=[gr.themes.GoogleFont("DM Sans"), "system-ui", "sans-serif"],
-    font_mono=[gr.themes.GoogleFont("JetBrains Mono"), "ui-monospace", "monospace"],
+    font=[gr.themes.GoogleFont("Plus Jakarta Sans"), "system-ui", "sans-serif"],
+    font_mono=[gr.themes.GoogleFont("IBM Plex Mono"), "ui-monospace", "monospace"],
     radius_size=gr.themes.sizes.radius_lg,
     spacing_size=gr.themes.sizes.spacing_md,
 ).set(
     # Overall page
-    body_background_fill="#fafaf9",
-    body_background_fill_dark="#1c1917",
+    body_background_fill="#f8f9fa",
+    body_background_fill_dark="#111827",
 
     # Blocks
     block_background_fill="white",
-    block_background_fill_dark="#292524",
+    block_background_fill_dark="#1f2937",
     block_border_width="0px",
-    block_shadow="0 1px 3px 0 rgba(0,0,0,0.04), 0 1px 2px -1px rgba(0,0,0,0.03)",
-    block_shadow_dark="0 1px 3px 0 rgba(0,0,0,0.3)",
+    block_shadow="0 1px 3px 0 rgba(0,0,0,0.06), 0 1px 2px -1px rgba(0,0,0,0.04)",
+    block_shadow_dark="0 1px 3px 0 rgba(0,0,0,0.4)",
 
     # Buttons
     button_primary_background_fill="*primary_500",
     button_primary_background_fill_hover="*primary_600",
     button_primary_text_color="white",
-    button_primary_shadow="0 1px 2px 0 rgba(26,115,232,0.15)",
+    button_primary_shadow="0 1px 2px 0 rgba(30,140,110,0.2)",
     button_secondary_background_fill="white",
     button_secondary_background_fill_hover="*neutral_50",
     button_secondary_border_color="*neutral_200",
@@ -480,12 +480,12 @@ theme = gr.themes.Base(
 
     # Inputs
     input_background_fill="white",
-    input_background_fill_dark="#292524",
+    input_background_fill_dark="#1f2937",
     input_border_color="*neutral_200",
     input_border_color_dark="*neutral_700",
     input_border_color_focus="*primary_400",
     input_shadow="none",
-    input_shadow_focus="0 0 0 2px rgba(26,115,232,0.12)",
+    input_shadow_focus="0 0 0 3px rgba(30,140,110,0.1)",
 
     # Labels & text
     block_label_text_color="*neutral_500",
@@ -494,100 +494,191 @@ theme = gr.themes.Base(
 )
 
 custom_css = """
-/* Clean up the chat area */
+/* ── Page background with subtle grid ── */
+.gradio-container {
+    background:
+        linear-gradient(rgba(248,249,250,0.97), rgba(248,249,250,0.97)),
+        linear-gradient(90deg, #e5e7eb 1px, transparent 1px),
+        linear-gradient(#e5e7eb 1px, transparent 1px) !important;
+    background-size: 100% 100%, 48px 48px, 48px 48px !important;
+}
+
+/* ── Chat area ── */
 .chatbot {
     border: none !important;
     box-shadow: none !important;
     background: transparent !important;
 }
 
-/* User messages - gentle warm tone */
+/* ── User messages ── */
 .message-row.user-row .message-bubble {
-    background: linear-gradient(135deg, #1a73e8 0%, #4d9bff 100%) !important;
-    color: white !important;
-    border-radius: 18px 18px 4px 18px !important;
-    box-shadow: 0 2px 8px rgba(26, 115, 232, 0.15) !important;
+    background: #111827 !important;
+    color: #f1f3f5 !important;
+    border-radius: 20px 20px 4px 20px !important;
+    box-shadow: 0 2px 12px rgba(17, 24, 39, 0.12) !important;
+    font-size: 0.92em !important;
+    line-height: 1.6 !important;
 }
 
-/* Bot messages - clean and airy */
+/* ── Bot messages ── */
 .message-row.bot-row .message-bubble {
     background: white !important;
-    border: 1px solid #e7e5e4 !important;
-    border-radius: 18px 18px 18px 4px !important;
-    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.03) !important;
+    border: 1px solid #e5e7eb !important;
+    border-radius: 20px 20px 20px 4px !important;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04) !important;
+    line-height: 1.65 !important;
 }
 
-/* Tool call accordions - subtle distinction */
+/* ── Tool call accordions ── */
 .message-row .accordion {
-    border: 1px solid #e7e5e4 !important;
-    border-radius: 12px !important;
-    background: #fafaf9 !important;
+    border: 1px solid #e5e7eb !important;
+    border-left: 3px solid #3bab8e !important;
+    border-radius: 2px 10px 10px 2px !important;
+    background: #f8f9fa !important;
     overflow: hidden;
+    transition: border-color 0.2s ease !important;
+}
+
+.message-row .accordion:hover {
+    border-left-color: #1e8c6e !important;
 }
 
 .message-row .accordion .label-wrap {
-    padding: 8px 14px !important;
-}
-
-/* Code blocks inside tool results */
-.message-row pre {
-    border-radius: 10px !important;
-    font-size: 0.82em !important;
-    border: 1px solid #e7e5e4 !important;
-}
-
-/* Title area */
-h1 {
+    padding: 10px 14px !important;
+    font-size: 0.88em !important;
     font-weight: 600 !important;
-    letter-spacing: -0.02em !important;
-    color: #1c1917 !important;
+    letter-spacing: 0.01em !important;
 }
 
-/* Description text */
-.prose p {
-    color: #78716c !important;
-    font-size: 0.95em !important;
+/* ── Code blocks in tool results ── */
+.message-row pre {
+    border-radius: 8px !important;
+    font-size: 0.8em !important;
+    border: 1px solid #e5e7eb !important;
+    background: #f8f9fa !important;
 }
 
-/* Example buttons */
+/* ── Header area ── */
+.header-bar {
+    background: linear-gradient(135deg, #111827 0%, #1f2937 50%, #145845 100%) !important;
+    border-radius: 16px !important;
+    padding: 28px 32px !important;
+    margin-bottom: 8px !important;
+    border: 1px solid rgba(255,255,255,0.06) !important;
+    box-shadow: 0 4px 24px rgba(17, 24, 39, 0.12), 0 1px 3px rgba(17, 24, 39, 0.08) !important;
+}
+
+.header-bar h1 {
+    font-size: 1.5em !important;
+    font-weight: 700 !important;
+    letter-spacing: -0.03em !important;
+    color: #f1f3f5 !important;
+    margin: 0 0 6px 0 !important;
+    line-height: 1.2 !important;
+}
+
+.header-bar p {
+    color: #9ca3af !important;
+    font-size: 0.9em !important;
+    margin: 0 !important;
+    line-height: 1.5 !important;
+    font-weight: 400 !important;
+}
+
+.header-bar .badge {
+    display: inline-block;
+    background: rgba(62, 171, 142, 0.15);
+    color: #6ec9b0;
+    font-size: 0.72em;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    padding: 3px 10px;
+    border-radius: 20px;
+    border: 1px solid rgba(62, 171, 142, 0.2);
+    margin-bottom: 10px;
+}
+
+/* ── Example buttons ── */
 .example-btn {
-    border-radius: 20px !important;
-    font-size: 0.85em !important;
-    padding: 8px 16px !important;
-    border: 1px solid #e7e5e4 !important;
+    border-radius: 12px !important;
+    font-size: 0.84em !important;
+    padding: 10px 16px !important;
+    border: 1px solid #e5e7eb !important;
     background: white !important;
-    transition: all 0.15s ease !important;
+    transition: all 0.2s cubic-bezier(0.25, 0.46, 0.45, 0.94) !important;
+    line-height: 1.5 !important;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.03) !important;
 }
 
 .example-btn:hover {
-    border-color: #1a73e8 !important;
-    color: #1a73e8 !important;
-    background: #f0f7ff !important;
+    border-color: #3bab8e !important;
+    color: #1e8c6e !important;
+    background: #f0f9f6 !important;
+    box-shadow: 0 2px 8px rgba(30,140,110,0.08) !important;
+    transform: translateY(-1px) !important;
 }
 
-/* Input area */
+/* ── Input area ── */
 .textbox textarea {
     border-radius: 14px !important;
+    font-size: 0.92em !important;
+    padding: 12px 16px !important;
 }
 
-/* Scrollbar */
+/* ── Markdown rendering in bot messages ── */
+.message-row.bot-row .message-bubble h3 {
+    font-size: 1em !important;
+    font-weight: 700 !important;
+    margin-top: 16px !important;
+    margin-bottom: 6px !important;
+    letter-spacing: -0.01em !important;
+}
+
+.message-row.bot-row .message-bubble ul,
+.message-row.bot-row .message-bubble ol {
+    padding-left: 1.2em !important;
+    margin: 6px 0 !important;
+}
+
+.message-row.bot-row .message-bubble li {
+    margin: 4px 0 !important;
+    line-height: 1.55 !important;
+}
+
+.message-row.bot-row .message-bubble blockquote {
+    border-left: 3px solid #d1d5db !important;
+    margin: 10px 0 !important;
+    padding: 6px 14px !important;
+    background: #f8f9fa !important;
+    border-radius: 0 8px 8px 0 !important;
+    font-size: 0.92em !important;
+}
+
+.message-row.bot-row .message-bubble hr {
+    border-color: #e5e7eb !important;
+    margin: 14px 0 !important;
+}
+
+/* ── Scrollbar ── */
 ::-webkit-scrollbar {
-    width: 6px;
+    width: 5px;
 }
 ::-webkit-scrollbar-track {
     background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-    background: #d6d3d1;
+    background: #d1d5db;
     border-radius: 3px;
 }
 ::-webkit-scrollbar-thumb:hover {
-    background: #a8a29e;
+    background: #9ca3af;
 }
 
-/* Footer links */
+/* ── Footer ── */
 footer {
-    opacity: 0.5;
+    opacity: 0.4;
+    font-size: 0.85em !important;
 }
 """
 
@@ -596,8 +687,13 @@ footer {
 # ---------------------------------------------------------------------------
 
 with gr.Blocks(title="Copilot Studio Agent Chat") as demo:
-    gr.Markdown("# Chat with Agents using Enhanced Task Completion")
-    gr.Markdown("Copilot Studio agents with Enhanced Task Completion can reason, call tools, and process files. This UI renders tool calls and reasoning inline.")
+    gr.HTML("""
+    <div class="header-bar">
+        <div class="badge">Enhanced Task Completion</div>
+        <h1>Copilot Studio Agent Chat</h1>
+        <p>Agents with Enhanced Task Completion reason dynamically, chain tools across MCP servers, and process files &mdash; all visible inline below.</p>
+    </div>
+    """)
     gr.ChatInterface(
         fn=chat,
         multimodal=True,
