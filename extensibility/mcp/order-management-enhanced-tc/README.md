@@ -99,7 +99,7 @@ node scripts/setup.mjs
 
 ### 2. Import agents (first time only)
 
-Import `agents/solution/OrderManagementMCPDemo.zip` into your environment via **make.powerapps.com > Solutions > Import**. This creates the agents, connectors, and connections. See [agents/IMPORT.md](./agents/IMPORT.md) for details.
+Import `agents/solution/OrderManagementMCPDemo.zip` into your environment via **make.powerapps.com > Solutions > Import**. This creates the agents, connectors, and connections. See [Importing the Agent Solutions](./agents/IMPORT) for details.
 
 ### 3. Start MCP servers + tunnels
 

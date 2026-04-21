@@ -1,31 +1,31 @@
+---
+title: Importing the Agent Solutions
+parent: Order Management with Enhanced Task Completion
+grand_parent: MCP
+nav_exclude: true
+---
+
 # Importing the Agent Solutions
 
 ## Prerequisites
 
 - A Power Platform environment with Copilot Studio
-- The MCP connectors deployed (see `scripts/deploy-connectors.mjs`)
 - Admin or Maker role in the target environment
 
 ## Steps
 
-### 1. Deploy connectors first
+### 1. Import the solution
 
-The agents reference custom connectors for the MCP servers. Deploy them before importing:
-
-```bash
-node scripts/deploy-connectors.mjs <environment-id> <order-tunnel-url> <warehouse-tunnel-url>
-```
-
-### 2. Import the solution
+The solution zip contains both agents, their custom connectors, and connection references — all in one package.
 
 1. Go to [make.powerapps.com](https://make.powerapps.com)
 2. Select your target environment
 3. Navigate to **Solutions** > **Import solution**
-4. Upload `solution/OrdersAgent.zip`
-5. When prompted for **Connection References**, click **New connection** for the Order Management MCP connector
-6. Select the connection you just created
-7. Click **Import**
-8. Repeat for `solution/WarehouseAgent.zip` with the Warehouse connector
+4. Upload `solution/OrderManagementMCPDemo.zip`
+5. Click **Next** through the details page
+6. On the **Connections** page, click **New connection** for each connector (no auth needed — just click **Create**)
+7. Select the connections you just created
+8. Click **Import**
 
 ### 3. Create connections (no auth)
 
