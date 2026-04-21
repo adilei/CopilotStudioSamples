@@ -92,26 +92,22 @@ An end-to-end sample demonstrating Copilot Studio agents with **Enhanced Task Co
 node scripts/setup.mjs
 ```
 
-### 2. Start MCP servers + tunnels
-
-```bash
-node scripts/start.mjs
-```
-
-This starts both MCP servers and creates anonymous dev tunnels. Note the tunnel URLs printed in the console.
-
-### 3. Deploy connectors
+### 2. Start MCP servers + tunnels + deploy connectors
 
 ```bash
 paconn login
-node scripts/deploy-connectors.mjs <environment-id> <order-tunnel-url> <warehouse-tunnel-url>
+node scripts/start.mjs --env <environment-id>
 ```
 
-### 4. Import agents
+This starts both MCP servers, creates anonymous dev tunnels, and automatically deploys/updates the Power Platform connectors with the tunnel URLs. The connectors are redeployed every time you restart.
 
-Import the solution zips from `agents/solution/` into your environment. See [agents/IMPORT.md](./agents/IMPORT.md) for detailed steps.
+Without `--env`, it starts servers and tunnels only (prints URLs for manual connector setup).
 
-### 5. Start the chat UI
+### 3. Import agents
+
+Import the solution zip from `agents/solution/` into your environment. See [agents/IMPORT.md](./agents/IMPORT.md) for detailed steps. You only need to do this once.
+
+### 4. Start the chat UI
 
 ```bash
 cp chat-ui/.env.sample chat-ui/.env
