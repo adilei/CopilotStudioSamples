@@ -11,35 +11,25 @@ An end-to-end sample demonstrating Copilot Studio agents with **Enhanced Task Co
 
 ## Architecture
 
-```
-                        Copilot Studio
-                    ┌───────────────────────┐
-                    │                       │
-                    │   Orders Agent        │
-                    │   (Enhanced TC)       │
-                    │       │     │         │
-                    │       │     │         │
-                    │   Warehouse Agent     │
-                    │   (child agent)       │
-                    │                       │
-                    └───┬──────────┬────────┘
-                        │          │
-              MCP Actions│          │MCP Actions
-                        ▼          ▼
-        ┌──────────────────┐  ┌──────────────────┐
-        │ Order Management │  │   Warehouse      │
-        │ MCP Server       │  │   MCP Server     │
-        │ (5 tools)        │  │   (4 tools)      │
-        │ Port 3000        │  │   Port 3001      │
-        └──────────────────┘  └──────────────────┘
+```mermaid
+graph TB
+    User([fa:fa-user User]) -->|chat| GradioUI
 
-                    Gradio Chat UI
-                    ┌───────────────────────┐
-                    │ Reasoning, tool calls │
-                    │ rendered inline       │
-                    │ File upload/download  │
-                    │ Port 7860             │
-                    └───────────────────────┘
+    subgraph Local Machine
+        GradioUI["Gradio Chat UI<br/>Port 7860<br/><i>Reasoning, tool calls,<br/>file upload/download</i>"]
+        OrderMCP["Order Management<br/>MCP Server<br/><b>5 tools</b> · Port 3000"]
+        WarehouseMCP["Warehouse<br/>MCP Server<br/><b>4 tools</b> · Port 3001"]
+    end
+
+    subgraph Copilot Studio
+        OrdersAgent["Orders Agent<br/><i>Enhanced Task Completion</i>"]
+        WarehouseAgent["Warehouse Agent<br/><i>child agent</i>"]
+        OrdersAgent -->|invokes| WarehouseAgent
+    end
+
+    GradioUI -->|"Agents SDK<br/>(streaming)"| OrdersAgent
+    OrdersAgent -->|"MCP Action<br/>(via connector)"| OrderMCP
+    WarehouseAgent -->|"MCP Action<br/>(via connector)"| WarehouseMCP
 ```
 
 ## What's Included
