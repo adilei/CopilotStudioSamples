@@ -80,7 +80,6 @@ An end-to-end sample demonstrating Copilot Studio agents with **Enhanced Task Co
 - Node.js 18+
 - Python 3.12+
 - [Dev Tunnels CLI](https://learn.microsoft.com/en-us/azure/developer/dev-tunnels/get-started) (`devtunnel`)
-- [paconn](https://learn.microsoft.com/en-us/connectors/custom-connectors/paconn-cli) (`pip install paconn`)
 - A Power Platform environment with Copilot Studio
 - An Entra ID app registration with `CopilotStudio.Copilots.Invoke` permission
 
@@ -92,22 +91,34 @@ An end-to-end sample demonstrating Copilot Studio agents with **Enhanced Task Co
 node scripts/setup.mjs
 ```
 
-### 2. Start MCP servers + tunnels + deploy connectors
+### 2. Import agents (first time only)
+
+Import `agents/solution/OrderManagementMCPDemo.zip` into your environment via **make.powerapps.com > Solutions > Import**. This creates the agents, connectors, and connections. See [agents/IMPORT.md](./agents/IMPORT.md) for details.
+
+### 3. Start MCP servers + tunnels
 
 ```bash
-paconn login
-node scripts/start.mjs --env <environment-id>
+node scripts/start.mjs
 ```
 
-This starts both MCP servers, creates anonymous dev tunnels, and automatically deploys/updates the Power Platform connectors with the tunnel URLs. The connectors are redeployed every time you restart.
+This starts both MCP servers and creates anonymous dev tunnels. Note the tunnel URLs printed:
 
-Without `--env`, it starts servers and tunnels only (prints URLs for manual connector setup).
+```
+Order Management MCP endpoint: https://xxxxx-3000.uks1.devtunnels.ms/mcp
+Warehouse MCP endpoint: https://xxxxx-3001.uks1.devtunnels.ms/mcp
+```
 
-### 3. Import agents
+### 4. Update connector URLs
 
-Import the solution zip from `agents/solution/` into your environment. See [agents/IMPORT.md](./agents/IMPORT.md) for detailed steps. You only need to do this once.
+Each time you restart (tunnels get new URLs), update the custom connector hosts:
 
-### 4. Start the chat UI
+1. Go to **make.powerapps.com** > **Custom connectors**
+2. Find **"orders mcp"** > click **Edit** > update the **Host** field with the order tunnel host (e.g., `xxxxx-3000.uks1.devtunnels.ms`) > click **Update connector**
+3. Find **"warehouse server 3"** > click **Edit** > update the **Host** field with the warehouse tunnel host (e.g., `xxxxx-3001.uks1.devtunnels.ms`) > click **Update connector**
+
+No need to republish the agents — the connectors are referenced dynamically.
+
+### 5. Start the chat UI
 
 ```bash
 cp chat-ui/.env.sample chat-ui/.env
