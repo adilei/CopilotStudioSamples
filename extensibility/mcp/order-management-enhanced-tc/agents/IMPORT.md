@@ -44,7 +44,18 @@ COPILOTSTUDIOAGENT__AGENTAPPID=<app-registration-client-id>
 
 Find the schema name in Copilot Studio under the agent's **Settings** > **Advanced** > **Schema name**.
 
-The App Registration needs the `CopilotStudio.Copilots.Invoke` delegated permission. See the [Microsoft docs](https://learn.microsoft.com/en-us/microsoft-copilot-studio/configure-sso-entra-id) for setup.
+#### App Registration setup
+
+The Gradio chat UI authenticates via MSAL interactive login. You need an Entra ID App Registration:
+
+1. Go to **portal.azure.com** > **App registrations** > **New registration**
+2. Name: e.g., "MCP Demo Chat Client"
+3. Supported account types: **Single tenant**
+4. Redirect URI: **Public client/native** > `http://localhost`
+5. After creation, go to **API permissions** > **Add a permission** > **APIs my organization uses**
+6. Search for **CopilotStudio** > select **CopilotStudio.Copilots.Invoke** (delegated)
+7. Click **Grant admin consent**
+8. Copy the **Application (client) ID** — this is your `COPILOTSTUDIOAGENT__AGENTAPPID`
 
 ### 5. Publish agents
 
