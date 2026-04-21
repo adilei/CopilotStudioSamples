@@ -7,7 +7,23 @@ nav_order: 3
 
 # Order Management with Enhanced Task Completion
 
-An end-to-end sample demonstrating Copilot Studio agents with **Enhanced Task Completion** calling MCP servers for e-commerce order management and warehouse fulfillment, with a **Gradio chat UI** that renders tool calls, reasoning, and file attachments inline.
+{: .warning }
+> **Experimental feature.** Enhanced Task Completion is an experimental capability in Copilot Studio. See the [official documentation](https://github.com/microsoft/Agents/blob/main/docs/enhanced-task-completion.md) for current status and limitations.
+
+An end-to-end sample demonstrating Copilot Studio agents with [**Enhanced Task Completion**](https://github.com/microsoft/Agents/blob/main/docs/enhanced-task-completion.md) calling MCP servers for e-commerce order management and warehouse fulfillment, with a **Gradio chat UI** that renders tool calls, reasoning, and file attachments inline.
+
+## What is Enhanced Task Completion?
+
+Enhanced Task Completion shifts Copilot Studio from a "plan-then-execute" model to an adaptive, conversational approach. Instead of selecting all tools upfront, the agent:
+
+- **Reasons before acting** — asks clarifying questions and gathers context before calling tools
+- **Orchestrates tools dynamically** — recognizes dependencies between tool outputs, parallelizes independent calls, and adjusts strategy based on intermediate results
+- **Interleaves conversation and actions** — fluidly mixes questions, tool calls, and responses across multiple turns
+- **Recovers from failures** — retries or finds alternative approaches when tool calls fail
+
+This sample demonstrates all of these capabilities through a realistic e-commerce customer service scenario where the agent chains 9 tools across two MCP servers and a connected agent to answer complex multi-part questions.
+
+![Gradio Chat UI](./assets/gradio-ui.png)
 
 ## Architecture
 
@@ -23,7 +39,7 @@ graph TB
 
     subgraph Copilot Studio
         OrdersAgent["Orders Agent<br/><i>Enhanced Task Completion</i>"]
-        WarehouseAgent["Warehouse Agent<br/><i>child agent</i>"]
+        WarehouseAgent["Warehouse Agent<br/><i>connected agent</i>"]
         OrdersAgent -->|invokes| WarehouseAgent
     end
 
