@@ -1,0 +1,5 @@
+gradio>=5.0.0
+microsoft-agents-copilotstudio-client>=0.0.2
+microsoft-agents-activity>=0.0.2
+msal>=1.28.0
+python-dotenv>=1.0.0
