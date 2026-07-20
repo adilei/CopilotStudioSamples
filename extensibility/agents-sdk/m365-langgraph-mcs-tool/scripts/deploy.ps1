@@ -40,10 +40,21 @@ function Need($cmd, $hint) {
 }
 Need node "Install Node.js 22 or 24: https://nodejs.org"
 Need npm  "npm ships with Node.js: https://nodejs.org"
-Need atk  "Install the M365 Agents Toolkit CLI: npm install -g @microsoft/m365agentstoolkit-cli"
 $nodeMajor = [int](node -p "process.versions.node.split('.')[0]")
 if ($nodeMajor -lt 22) { Fail "Node.js $nodeMajor detected; this sample requires Node 22 or 24." }
-Write-Info "node $(node -v), npm $(npm -v), atk $((atk --version 2>$null | Select-Object -First 1))"
+
+# Resolve the Microsoft 365 Agents Toolkit CLI (`atk`). Prefer a global install;
+# otherwise run it on demand with npx so no global install is required. (Note: the
+# older `teamsapp` CLI reads teamsapp.yml, not m365agents.yml, so it is not used.)
+if (Get-Command atk -ErrorAction SilentlyContinue) {
+  $AtkExe = 'atk'; $AtkBase = @()
+  Write-Info "node $(node -v), npm $(npm -v), atk $((atk --version 2>$null | Select-Object -First 1))"
+} else {
+  Need npx "npx ships with Node.js: https://nodejs.org"
+  $AtkExe = 'npx'; $AtkBase = @('-y', '-p', '@microsoft/m365agentstoolkit-cli', 'atk')
+  Write-Info "node $(node -v), npm $(npm -v); atk via npx (@microsoft/m365agentstoolkit-cli)"
+}
+$AtkDisplay = (@($AtkExe) + $AtkBase) -join ' '
 
 # --- helpers to read/write .env files --------------------------------------
 function Read-Env($key, $file) {
@@ -127,16 +138,16 @@ npm run build
 # --- 5. Provision + deploy -------------------------------------------------
 Write-Head "5. Provisioning Azure resources (atk provision)"
 Write-Info "You may be prompted to sign in to Azure and Microsoft 365."
-atk provision --env $EnvName
+& $AtkExe @AtkBase provision --env $EnvName
 
 Write-Head "6. Deploying the bot (atk deploy)"
-atk deploy --env $EnvName
+& $AtkExe @AtkBase deploy --env $EnvName
 
 # --- Done ------------------------------------------------------------------
 $Pkg = "appPackage/build/appPackage.$EnvName.zip"
 Write-Head "Done. Next steps"
 Write-Info "1. Install the app package: $Pkg"
 Write-Info "   - Teams: Apps -> Manage your apps -> Upload an app -> Upload a custom app"
-Write-Info "   - Or run: atk install --file-path $Pkg --env $EnvName"
+Write-Info "   - Or run: $AtkDisplay install --file-path $Pkg --env $EnvName"
 Write-Info "2. Open the agent in Teams / Microsoft 365 Copilot and say hello."
 Write-Info "3. First message triggers a one-time sign-in (delegated Copilot Studio access)."

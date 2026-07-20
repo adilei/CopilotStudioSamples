@@ -12,7 +12,8 @@ using the **Microsoft 365 Agents Toolkit** (`atk`). For local debugging instead,
 ## Prerequisites
 
 - **Node.js 22 or 24** and npm.
-- **Microsoft 365 Agents Toolkit CLI**: `npm install -g @microsoft/m365agentstoolkit-cli`
+- **Microsoft 365 Agents Toolkit CLI** (`atk`) — optional; the deploy script runs it via `npx`
+  if it isn't installed. To install globally: `npm install -g @microsoft/m365agentstoolkit-cli`
 - **Azure subscription** with rights to create resources and assign roles.
 - A **published Copilot Studio agent** — its **environment ID** and **schema name**.
 - An **Azure OpenAI** resource with a chat **deployment** and its **API key**.
@@ -29,7 +30,8 @@ From the sample root:
 
 The script:
 
-1. Checks that `node`, `npm`, and `atk` are installed.
+1. Checks that `node` and `npm` are installed, and resolves the `atk` CLI (using `npx` if it
+   isn't installed globally).
 2. Prompts for anything not already set: `MCS_ENVIRONMENT_ID`, `MCS_SCHEMA_NAME`,
    `AZURE_OPENAI_ENDPOINT`, `AZURE_OPENAI_DEPLOYMENT`, the Azure OpenAI API key, and
    (optionally) the target subscription/resource group.

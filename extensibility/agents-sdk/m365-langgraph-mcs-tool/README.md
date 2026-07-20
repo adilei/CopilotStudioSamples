@@ -63,7 +63,8 @@ flowchart LR
 
 - **Node.js 22 or 24** and npm.
 - **Azure subscription** with permission to create resources and assign roles.
-- **Microsoft 365 Agents Toolkit CLI** (`atk`):
+- The **Microsoft 365 Agents Toolkit CLI** (`atk`). Optional — the deploy script runs it via
+  `npx` if it isn't installed. To install it globally anyway:
   `npm install -g @microsoft/m365agentstoolkit-cli`
 - A **published Copilot Studio agent** — you need its **environment ID** and **schema name**
   (Copilot Studio → your agent → *Settings → Advanced → Metadata*).
