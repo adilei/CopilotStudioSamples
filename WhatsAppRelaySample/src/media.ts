@@ -80,8 +80,11 @@ export async function outgoingFile(
     const comma = contentUrl.indexOf(",");
     const header = contentUrl.slice(5, comma);
     const data = contentUrl.slice(comma + 1);
+    // Repeated-group regexes can exhaust V8's stack on valid multi-megabyte files.
+    const padding = data.endsWith("==") ? 2 : data.endsWith("=") ? 1 : 0;
     if (comma < 0 || header.toLowerCase() !== `${spec.mime};base64` ||
-        data.length > Math.ceil(spec.max / 3) * 4 || !/^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/.test(data)) {
+        data.length > Math.ceil(spec.max / 3) * 4 || data.length % 4 !== 0 ||
+        /[^A-Za-z0-9+/]/.test(data.slice(0, data.length - padding))) {
       throw new RelayError("attachment_encoding", "The agent returned an invalid or oversized inline attachment.");
     }
     return fileFromBytes(Buffer.from(data, "base64"), spec.mime, attachment.name);

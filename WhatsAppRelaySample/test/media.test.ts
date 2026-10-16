@@ -60,6 +60,54 @@ test("rejects bad signatures, unsupported types, empty and oversized files", asy
   await assert.rejects(outgoingFile({ contentType: "text/plain", contentUrl: "data:application/pdf;base64,YQ==" }, [], signal()));
 });
 
+for (const { sample, size } of [
+  { sample: samples[0], size: 5 * 1024 * 1024 },
+  { sample: samples[1], size: 5 * 1024 * 1024 },
+  { sample: samples[1], size: limits.fileBytes },
+]) {
+  test(`${sample.kind}: inline attachments preserve all ${size} bytes`, async () => {
+    const bytes = Buffer.alloc(size, 65);
+    sample.bytes.copy(bytes);
+    const file = await outgoingFile({
+      contentType: sample.mime, contentUrl: `data:${sample.mime};base64,${bytes.toString("base64")}`,
+    }, [], signal());
+    assert.deepEqual(file.bytes, bytes);
+  });
+}
+
+for (const { sample, size } of [
+  { sample: samples[0], size: 5 * 1024 * 1024 + 1 },
+  { sample: samples[1], size: limits.fileBytes + 1 },
+]) {
+  test(`${sample.kind}: inline attachments one byte over the size limit are rejected`, async () => {
+    const bytes = Buffer.alloc(size, 65);
+    sample.bytes.copy(bytes);
+    await assert.rejects(outgoingFile({
+      contentType: sample.mime, contentUrl: `data:${sample.mime};base64,${bytes.toString("base64")}`,
+    }, [], signal()), /attachment_encoding|media_size/);
+  });
+}
+
+test("inline base64 accepts all padding lengths without changing decoded content", async () => {
+  for (const [data, expected] of [["YQ==", "a"], ["YWI=", "ab"], ["YWJj", "abc"]]) {
+    const file = await outgoingFile({
+      contentType: "text/plain", contentUrl: `data:text/plain;base64,${data}`,
+    }, [], signal());
+    assert.equal(file.bytes.toString(), expected);
+  }
+});
+
+test("inline base64 rejects invalid lengths, misplaced padding, and non-base64 characters", async () => {
+  for (const data of [
+    "YQ", "YQ=", "YQ===", "Y===", "====", "Y=Q=", "YQ==YWJj",
+    "YW J", "YWJj\n", "YWJ_", "YWJ-", "YWJ\u0000", "YWJ\u00e9",
+  ]) {
+    await assert.rejects(outgoingFile({
+      contentType: "text/plain", contentUrl: `data:text/plain;base64,${data}`,
+    }, [], signal()), /attachment_encoding/);
+  }
+});
+
 test("external files require an exact allowlisted origin; no credential forwarding", async () => {
   const file = { contentType: "text/plain", contentUrl: "https://files.example.org/file?sig=fixture" };
   await assert.rejects(outgoingFile(file, [], signal()), /attachment_origin/);

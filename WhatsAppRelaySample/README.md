@@ -162,6 +162,8 @@ Defaults are centralized in `src/config.ts`:
 | Graceful shutdown drain | 25 seconds |
 | Free-form service window | 24 hours from the latest received user-message timestamp |
 
+For Meta and token-service HTTP calls, the earlier of the individual request deadline and turn/shutdown cancellation wins.
+
 Reservations limit concurrent agent turns to two even though the queue has four workers. Additional work can receive an explicit busy reply; this is not an RSS guarantee or a durable delayed retry. Node/SDK objects and HTTP buffers also consume memory. SDK-internal Entra **bot credential bootstrap** follows the SDK's own network policy and is not fully cancellable by the relay's turn signal; shutdown still has a hard drain deadline.
 
 The queue only stores metadata and message text, never downloaded files. Idle sessions are swept periodically when not busy. Received sender order across different delayed/retried webhooks is not guaranteed.

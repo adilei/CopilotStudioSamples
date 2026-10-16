@@ -15,7 +15,10 @@ class BoundedTokenHttpClient extends HttpClient {
     super({ baseURL: client.baseURL, headers: client.defaultHeaders });
   }
   override request<T = unknown>(config: HttpRequestConfig): Promise<HttpResponse<T>> {
-    return super.request<T>({ ...config, timeout: limits.requestMs, signal: this.signal });
+    return super.request<T>({
+      ...config,
+      signal: AbortSignal.any([this.signal, AbortSignal.timeout(limits.requestMs)]),
+    });
   }
 }
 
