@@ -159,13 +159,15 @@ The command checks advertised Linux Node runtimes, preferring 22 LTS and otherwi
 
 Azure sets `RELAY_HOST=0.0.0.0`; the platform supplies `PORT`. The script removes any app-setting `PORT` override rather than uploading the laptop's `3978`. Startup is `node dist/src/index.js`, with no required `.env` and no PM2 cluster. `npm run start:azure` is the equivalent environment-only manual command. Do not add replicas, autoscale, or multiple workers to this memory-only implementation.
 
-Deployments, restarts, and maintenance lose conversation/auth correlation and can lose acknowledged messages. Host health alone does not prove a working delegated sign-in or WhatsApp reply. Automated coverage includes repeated command runs with simulated provider services, real local server startup/shutdown, and Bicep compilation. The [live setup checks](#live-setup-verification) below verify additional provider integrations, **not a completed Azure deployment or the full WhatsApp acceptance checklist**.
+Deployments, restarts, and maintenance lose conversation/auth correlation and can lose acknowledged messages. Host health alone does not prove a working delegated sign-in or WhatsApp reply. Automated coverage includes repeated command runs with simulated provider services, real local server startup/shutdown, and Bicep compilation. The [live setup checks](#live-setup-verification) below also verify real Azure hosting and redeployment using the production helpers, **not the full Meta-dependent deployment entrypoint or WhatsApp acceptance checklist**.
 
 ### Ownership, failures, and scoped cleanup
 
 Ignored `.setup/*.json` files record ownership IDs and nonsecret provisioning state; they are not a runtime message/token cache. Keep them with the private configuration. Name collisions with unowned apps/plans/bots are refused. An existing resource group may be reused without changing its tags. Different targets need a separate checkout/configuration; do not erase ownership files merely to bypass a refusal.
 
 **Idempotence means resource convergence, not a no-op restart.** Repeated runs retain owned identities, credentials, tunnel/port registrations, and hosting resource IDs. The local runner stops/restarts its own process each time; Azure deployment can rebuild/restart the existing app even when settings are unchanged. ARM deployment names are ownership-scoped, and a still-active deployment is not overwritten after a timeout/lost response: wait for it to finish before retrying. Runtime conversations remain volatile.
+
+A source ZIP deployment can continue remotely after the Azure CLI reports an error. Inspect App Service deployment history as well as ARM deployment status before retrying; do not submit another source deployment while its remote state is active or unknown. A successful remote build still needs a separate hosted `/health` check.
 
 Each setup target has a lock file containing its process ID. Locks coordinate one checkout only; do not run copies of the same ownership records concurrently on different machines/checkouts. After a crash, verify that the recorded process is no longer running before removing only the stale `.setup/<command>.json.lock`. Do not remove an active lock or discard an uncertain credential record. CLI/API errors deliberately suppress raw payloads; inspect the named resource/deployment in its portal when more detail is needed, without enabling credential-bearing debug logs.
 
@@ -181,13 +183,16 @@ The following checks have also been run against real provider services, separate
 | --- | --- | --- |
 | Authentication setup | Fresh Bot/Entra/OAuth provisioning and two reruns retained application, service-principal, and credential identities without rotating secrets. Existing-auth `--reuse` also passed. | Metadata checks do not establish tenant consent or agent access for a newly created sign-in app. |
 | SDK token service | Fresh bot credentials obtained a real sign-in resource; synthetic sign-out and subsequent stale-code rejection succeeded without invoking the agent. | WhatsApp output was captured in memory. No user completed delegated sign-in with the disposable app. |
-| Local startup | Two actual `start:local` runs created/reused the same owned tunnel and port, passed local/public health, refused an unapproved callback replacement, and stopped their children cleanly. | The successful callback-replacement path and subsequent user conversation remain unverified. The original callback was preserved and tunnel default restored. |
+| Local startup | Two actual `start:local` runs created/reused the same owned tunnel and port, passed local/public health, refused an unapproved callback replacement, and stopped their children cleanly. | The successful callback-replacement path remains unverified. An expired Meta token blocked the later positive-path checks. The original callback was preserved and tunnel default restored. |
 | Webhook boundary | The local relay and existing public callback accepted the verification challenge and a correctly signed empty event, rejected an incorrect verification token with 403, and rejected unsigned/incorrectly signed POSTs with 401. | Empty events do not establish message processing, authentication, or delivery. |
-| Azure deployment preflight | The actual `deploy:azure` entrypoint passed its build, Azure authentication, runtime selection, Bicep compilation, source ZIP packaging, and live Meta validation, then refused paid deployment without approval. | No App Service was provisioned or deployed; hosted startup, deployment reruns, and hosted WhatsApp conversations remain unverified. |
+| Azure deployment preflight | The actual `deploy:azure` entrypoint passed its build, Azure authentication, runtime selection, Bicep compilation, source ZIP packaging, and live Meta validation, then refused paid deployment without approval. | The later full CLI success path and callback switch were blocked by an expired Meta token, not counted as passed. |
+| Azure hosting and redeployment | The production deployment helpers provisioned and redeployed the same Linux B1 app/plan. Oryx built the source-only ZIP; environment-only startup, one instance, retained bot credentials, and no laptop `PORT` override were verified. Hosted health, verification challenges, signed empty events, and rejection of invalid verification/signatures passed. | The first CLI upload reported an error but completed remotely; its terminal success was confirmed before a successful rerun. These checks do not establish Meta callback switching or Azure-hosted WhatsApp sign-in/message delivery. |
+
+The final noninteractive suite passed all 95 tests with no failures or skips. Further interactive WhatsApp tests were excluded from that run; the credential-blocked positive setup paths above remain open rather than being inferred from fixture coverage or healthy endpoints.
 
 ### Live acceptance checklist (partially completed)
 
-The initial text-link sign-in and multi-turn flow were previously exercised, but the updated button/greeting behavior and media checks remain pending. Real two-user isolation also remains unverified; sequential sign-ins or synthetic sender IDs are not substitutes for a second WhatsApp account.
+Single-user browser sign-in, consecutive-message conversation continuity, and loss of the old context after `--reset` were user-confirmed on the local relay. Updated button/greeting behavior, explicit sign-out/stale-code acceptance, and media checks remain unverified. Real two-user isolation also remains unverified; sequential sign-ins or synthetic sender IDs are not substitutes for a second WhatsApp account.
 
 | Check | Expected result |
 | --- | --- |
@@ -203,7 +208,7 @@ The initial text-link sign-in and multi-turn flow were previously exercised, but
 | Saturation, 401/403/429, disconnect, timeout | Explicit safe failure/backpressure; no automatic re-execution of uncertain tool actions. |
 | Status notifications | Accepted sends are distinguished from later delivered/read/failed statuses. |
 
-Use test data and harmless agent tools. A successful Meta HTTP send is not proof of WhatsApp delivery. Do not move to an Azure application deployment until these live checks pass. No resource provisioning, publishing, tunnel startup, or real message sending is performed by `npm test`.
+Use test data and harmless agent tools. A successful Meta HTTP send is not proof of WhatsApp delivery. Do not use an Azure deployment for real WhatsApp workloads until the applicable live acceptance checks pass. Disposable hosting checks alone do not satisfy that requirement. No resource provisioning, publishing, tunnel startup, or real message sending is performed by `npm test`.
 
 ## Attachments, typing, and streaming
 
