@@ -10,6 +10,9 @@ import { config, env, message, webhook } from "./fixtures.js";
 
 test("requires explicit endpoint/version, cloud, IDs, and safe file origins", () => {
   assert.equal(loadConfig(env).cloud, "Prod");
+  assert.equal(loadConfig(env).host, "127.0.0.1");
+  assert.equal(loadConfig({ ...env, RELAY_HOST: "0.0.0.0", PORT: "8080" }).port, 8080);
+  assert.equal(loadConfig({ ...env, RELAY_HOST: "0.0.0.0" }).host, "0.0.0.0");
   for (const change of [
     { GHCP_CLOUD: "Unknown" }, { BOT_CLIENT_ID: "wrong" }, { META_PHONE_NUMBER_ID: "abc" },
     { GHCP_DIRECT_CONNECT_URL: "https://example.com/bot" },
@@ -17,6 +20,7 @@ test("requires explicit endpoint/version, cloud, IDs, and safe file origins", ()
     { GHCP_DIRECT_CONNECT_URL: "http://example.com/bot?api-version=1" },
     { GHCP_DIRECT_CONNECT_URL: "https://user:pass@example.com/bot?api-version=1" },
     { GHCP_FILE_ORIGINS: "https://example.com/path" }, { META_ACCESS_TOKEN: "" },
+    { RELAY_HOST: "external.example.org" },
   ]) assert.throws(() => loadConfig({ ...env, ...change }));
 });
 

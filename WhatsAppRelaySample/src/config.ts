@@ -25,6 +25,7 @@ export const limits = {
 
 export interface Config {
   port: number;
+  host: "127.0.0.1" | "0.0.0.0";
   metaToken: string;
   metaSecret: string;
   verifyToken: string;
@@ -60,6 +61,10 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
   if (!/^v\d+\.\d+$/.test(graphVersion)) throw new ConfigError("META_GRAPH_VERSION must look like v25.0.");
   const port = Number(env.PORT ?? 3978);
   if (!Number.isInteger(port) || port < 1 || port > 65535) throw new ConfigError("Invalid PORT.");
+  const host = env.RELAY_HOST ?? "127.0.0.1";
+  if (host !== "127.0.0.1" && host !== "0.0.0.0") {
+    throw new ConfigError("RELAY_HOST must be 127.0.0.1 or 0.0.0.0.");
+  }
   const id = (key: string) => {
     const value = required(key);
     if (!/^\d+$/.test(value)) throw new ConfigError(`${key} must be a numeric Meta ID.`);
@@ -76,7 +81,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
     return origin.origin;
   });
   return {
-    port, cloud, ghcpUrl: url.toString(), graphVersion, fileOrigins,
+    port, host, cloud, ghcpUrl: url.toString(), graphVersion, fileOrigins,
     metaToken: required("META_ACCESS_TOKEN"), metaSecret: required("META_APP_SECRET"),
     verifyToken: required("META_VERIFY_TOKEN"), phoneId: id("META_PHONE_NUMBER_ID"),
     accountId: id("META_WABA_ID"), botId: guid("BOT_CLIENT_ID"),

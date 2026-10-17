@@ -20,9 +20,9 @@ async function main(): Promise<void> {
   const server = webhookServer(config, queue);
   await new Promise<void>((resolve, reject) => {
     server.once("error", reject);
-    server.listen(config.port, "127.0.0.1", resolve);
+    server.listen(config.port, config.host, resolve);
   });
-  console.log(`Relay listening on http://127.0.0.1:${config.port}; expose /webhook through your HTTPS tunnel.`);
+  console.log(`Relay listening on http://${config.host}:${config.port}; webhook path: /webhook.`);
   const sweep = setInterval(() => relay.sweep(), 60_000);
   sweep.unref();
   let stopping = false;

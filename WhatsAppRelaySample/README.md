@@ -49,7 +49,7 @@ Development access tokens expire. Production setup uses appropriately managed cr
 
 ### 2. Azure Bot / Entra OAuth configuration
 
-Use an existing configuration or create these resources manually:
+Use an existing configuration, the [optional provisioning command](#optional-auth-provisioning), or create these resources manually:
 
 - A single-tenant Azure Bot registration with its bot identity app ID, tenant ID, and client secret.
 - An Entra **confidential web application** for delegated sign-in (which can be separate from the bot identity). Add the Web redirect URI `https://token.botframework.com/.auth/web/redirect`.
@@ -83,7 +83,7 @@ Test/Preprod/Dev use a 31/1 split and their ring-specific Power Platform API suf
 
 ## Run locally
 
-Use Node.js 22.17+ (22.x) or 24.x:
+Use Node.js 22.17+ (22.x) or 24.x and install the [Dev Tunnel CLI](https://learn.microsoft.com/en-us/azure/developer/dev-tunnels/get-started). These are Node orchestration scripts, not Bash-specific launchers. Run commands from this sample directory through `npm run`; the wrappers rely on npm's executable path for cross-platform dependency/build commands.
 
 ```bash
 cd WhatsAppRelaySample
@@ -91,18 +91,83 @@ npm ci
 cp .env.example .env
 # Fill .env locally. Never commit it or paste its secrets into logs.
 npm test
-npm start
+npm run start:local -- --dry-run
+npm run start:local
 ```
 
-The server binds to **127.0.0.1:3978** by default. In another terminal, use an HTTPS tunnel, for example:
+On Windows, copy `.env.example` to `.env` with your shell/editor instead of `cp` if necessary. Use restrictive file permissions/ACLs. The setup scripts use private file modes where supported; Windows users should secure the checkout and configuration with user-only ACLs.
+
+The local runner builds, validates configuration and the Meta token/app/WABA/phone, checks the port, signs in to Dev Tunnels if needed, and creates or reuses its own persistent anonymous tunnel. It verifies both local and public `/health`, checks the public verification challenge, then configures the Meta `messages` subscription and WABA installation. An expired token fails preflight: update `META_ACCESS_TOKEN` privately and rerun.
+
+**Replacing a different existing Meta callback requires confirmation.** This redirects messages for that app's WhatsApp subscription, not just this checkout. In unattended runs, provide `--replace-webhook` only when you intend that switch. The runner preserves other webhook fields, refuses incompatible field versions and WABA/phone-number callback overrides, and does not modify other subscription objects. Use a dedicated development Meta app when possible.
+
+The server stays on **127.0.0.1:3978** locally; change `PORT` in `.env` if another service owns it. The runner never kills a preexisting listener or adopts your manually created tunnel. It verifies ownership/ports through CLI JSON. Dev Tunnel CLI 1.0.1516 does not include forwarding URLs in that JSON, so the runner reads the actual `Connect via browser` readiness URL from the host process; it never constructs a hostname from the friendly tunnel ID.
+
+Keep the command running for the whole test. Ctrl+C stops only its relay/tunnel children, allowing the relay's bounded drain. The persistent tunnel registration and Meta callback are retained; stopping the host does **not** restore an old callback. A failed webhook setup stops the owned children and reports failure rather than claiming the integration is ready. Avoid request-body inspection and verbose SDK/HTTP diagnostics with real conversations.
+
+All three setup commands accept `--help`, `--env-file PATH`, and `--dry-run`. Dry runs describe intended operations and validate supplied target arguments; they **do not** read credentials, check remote permissions/resource availability, provision resources, open tunnels, or change callbacks. Actual local/deployment runs perform credential and health preflights. Shell environment variables override `.env`.
+
+### Optional auth provisioning
+
+Install the [Azure CLI](https://learn.microsoft.com/en-us/cli/azure/install-azure-cli), sign in to the intended commercial tenant, and choose an explicit subscription. You need permissions to register Entra apps/service principals and manage Azure Bot resources; subscription ownership alone does not necessarily permit directory writes. The scripts do not switch global subscription/cloud defaults or grant tenant-wide consent.
 
 ```bash
+az login --tenant "<tenant-guid>"
+npm run setup:auth -- --tenant "<tenant-guid>" --subscription "<subscription-guid>" --group "rg-relay" --location "westeurope" --bot "my-relay-bot" --dry-run
+npm run setup:auth -- --tenant "<tenant-guid>" --subscription "<subscription-guid>" --group "rg-relay" --location "westeurope" --bot "my-relay-bot"
+```
+
+This creates a resource group if needed, separate single-tenant bot/sign-in applications and service principals, an F0 Azure Bot, and the `mcs` OAuth connection. `--connection NAME` selects another connection name. It discovers the commercial Power Platform delegated invoke permission, sets the managed OAuth redirect, and stores generated **90-day** credentials in private `.env`. The sign-in app's `BOT_OAUTH_CLIENT_ID` / `BOT_OAUTH_CLIENT_SECRET` are management-only entries; the Azure application deployment does not upload them. Review tenant consent and agent access separately.
+
+Rerunning with the same ownership records reuses the apps and credentials; it does not rotate secrets automatically. If credential issuance succeeded remotely but its result could not be saved, setup records an uncertain operation and refuses to generate another secret. Inspect the recorded application and restore/rotate its credential manually. Keep expiration reminders; rotate the bot secret in runtime configuration and the sign-in secret in the Azure Bot OAuth connection as appropriate.
+
+For existing resources, fill the four `BOT_*` runtime entries from `.env.example`, then validate without changing resources:
+
+```bash
+npm run setup:auth -- --tenant "<tenant-guid>" --subscription "<subscription-guid>" --group "existing-rg" --bot "existing-bot" --connection "mcs" --reuse
+```
+
+Reuse verifies metadata, not client-secret validity, tenant consent, or a real delegated sign-in. Automatic provisioning/reuse validation supports commercial Prod only. Configure other GHCP rings manually with their correct scope; sovereign-cloud OAuth is not implemented.
+
+### Direct/manual startup remains available
+
+If you prefer managing the tunnel and Meta dashboard yourself:
+
+```bash
+npm run build
+npm start
+# In a separate terminal:
 devtunnel host -p 3978 --allow-anonymous
 ```
 
-In the Meta app, set the callback to `https://<tunnel-host>/webhook` and enter the exact `META_VERIFY_TOKEN`. Subscribe the app/WABA to **messages** webhooks, including incoming messages and delivery statuses. Reconfigure the callback if the tunnel URL changes. Do not enable request-body inspection or verbose SDK/HTTP diagnostics with real conversations; these can expose codes, sign-in URLs, tokens, and message contents.
+Set Meta's callback to `https://<actual-tunnel-host>/webhook` with `META_VERIFY_TOKEN`, subscribe to `messages`, and install the app on the WABA. `npm start` uses compiled output and `.env`; rebuild after code edits. Only `/webhook` and `/health` are exposed.
 
-Only the sample's two HTTP routes are exposed through the tunnel. Keep the host and tunnel running for the entire test. `npm start` uses the compiled output; run `npm run build` after edits.
+## Lightweight Azure deployment
+
+**This is a convenience host for the sample, not an enterprise architecture recommendation.** `infra/main.bicep` creates one Linux **Basic B1 App Service plan** and one web app, Always On, HTTPS/TLS 1.2+, a `/health` probe, and one Node process/instance. B1 incurs ongoing charges, including when the web app is stopped. Check regional pricing before confirming. No Service Bus, database, gateway, registry, or Key Vault is deployed.
+
+Use the Azure CLI with Bicep installed (`az bicep install` if missing). Complete the live acceptance checklist before using real workloads. With the same private runtime configuration and explicit tenant/subscription:
+
+```bash
+npm run deploy:azure -- --tenant "<tenant-guid>" --subscription "<subscription-guid>" --group "rg-relay" --location "westeurope" --app "globally-unique-relay-app" --plan "relay-plan" --dry-run
+npm run deploy:azure -- --tenant "<tenant-guid>" --subscription "<subscription-guid>" --group "rg-relay" --location "westeurope" --app "globally-unique-relay-app" --plan "relay-plan"
+```
+
+The command confirms the paid plan before resource changes and separately confirms a different Meta callback after the host is healthy. `--accept-cost` and `--replace-webhook` provide those two explicit approvals for unattended runs; neither implies the other. A failed deployment can leave billable resources. Refusing the final callback switch does not delete the app or undo a completed deployment.
+
+The command checks advertised Linux Node runtimes, preferring 22 LTS and otherwise 24 LTS, compiles Bicep, and deploys an **allowlisted source ZIP**. Linux/Oryx restores dependencies and builds TypeScript; macOS/Windows `node_modules`, `.env`, `.setup`, logs, tests, and scripts are not uploaded. Runtime settings go through authenticated ARM requests, not secret-bearing CLI arguments or deployment outputs. Existing unrelated app settings are retained. `BOT_OAUTH_CLIENT_SECRET` is not a runtime setting.
+
+Azure sets `RELAY_HOST=0.0.0.0`; the platform supplies `PORT`. The script removes any app-setting `PORT` override rather than uploading the laptop's `3978`. Startup is `node dist/src/index.js`, with no required `.env` and no PM2 cluster. `npm run start:azure` is the equivalent environment-only manual command. Do not add replicas, autoscale, or multiple workers to this memory-only implementation.
+
+Deployments, restarts, and maintenance lose conversation/auth correlation and can lose acknowledged messages. Host health alone does not prove a working delegated sign-in or WhatsApp reply. The new automation is covered by local/fake-service checks and Bicep compilation, **not a completed live Azure deployment or renewed live Meta run**.
+
+### Ownership, failures, and scoped cleanup
+
+Ignored `.setup/*.json` files record ownership IDs and nonsecret provisioning state; they are not a runtime message/token cache. Keep them with the private configuration. Name collisions with unowned apps/plans/bots are refused. An existing resource group may be reused without changing its tags. Different targets need a separate checkout/configuration; do not erase ownership files merely to bypass a refusal.
+
+Each setup target has a lock file containing its process ID. After a crash, verify that the recorded process is no longer running before removing only the stale `.setup/<command>.json.lock`. Do not remove an active lock or discard an uncertain credential record. CLI/API errors deliberately suppress raw payloads; inspect the named resource/deployment in its portal when more detail is needed, without enabling credential-bearing debug logs.
+
+Stopping the local command leaves its persistent tunnel registration. Once no longer needed, inspect the exact ID in `.setup/local.json`, then use `devtunnel delete <owned-tunnel-id>`. Remove or change the Meta callback separately. To stop Azure charges, delete the specific owned web app **and its App Service plan** after checking that the plan has no other apps. Delete a resource group only if it is dedicated and every contained resource is disposable. Auth apps, service principals, Azure Bot/OAuth resources, Meta resources, and their credentials have separate lifecycles; hosting cleanup does not implicitly delete them.
 
 ### Live acceptance checklist (partially completed)
 
@@ -185,11 +250,11 @@ On shutdown, new admission stops and accepted work has up to 25 seconds to drain
 | Hosting and observability | A long-running host, health/readiness and safe correlation, queue-age/delivery/auth metrics, alerts, capacity planning, coordinated deployments, and tested recovery. Do not rely on background work after a serverless invocation ends. |
 | Privacy | Review data transfers and retention across Meta, Azure Bot OAuth, Entra, Copilot Studio, tools, browsers, and host logs. Memory-only relay state is not end-to-end zero retention. |
 
-Deploying this unchanged to App Service does **not** make it production-ready. It supports one process/instance only and binds to localhost for local testing; cloud hosting needs an appropriate network listener/proxy plus the production controls above.
+Deploying this to App Service does **not** make it production-ready. It supports one process/instance only. See [Enterprise readiness](docs/enterprise-readiness.md) for durable admission, Service Bus sessions, auth/conversation persistence, outbox/uncertainty handling, and public-webhook protection. These are documented architecture choices, not optional runtime backends included in this sample.
 
 ## Source layout and references
 
-`server.ts` owns signed webhooks; `queue.ts` owns admission/order/deduplication; `adapter.ts` bridges the SDK transport; `relay.ts` coordinates sessions/auth/output; `ghcp.ts` isolates the temporary runtime contract; `meta.ts` and `media.ts` handle the channel and bounded files. Tests use Node's built-in test runner.
+`server.ts` owns signed webhooks; `queue.ts` owns admission/order/deduplication; `adapter.ts` bridges the SDK transport; `relay.ts` coordinates sessions/auth/output; `ghcp.ts` isolates the temporary runtime contract; `meta.ts` and `media.ts` handle the channel and bounded files. `scripts/` contains control-plane setup helpers, and `infra/` contains the lightweight App Service template. Tests use Node's built-in test runner.
 
 Direct Meta avoids a dependency on ACS Advanced Messaging for WhatsApp, which Microsoft lists for retirement on **September 30, 2028**. Azure can still host a production relay after its reliability requirements are addressed.
 
