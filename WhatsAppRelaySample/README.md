@@ -159,7 +159,7 @@ The command checks advertised Linux Node runtimes, preferring 22 LTS and otherwi
 
 Azure sets `RELAY_HOST=0.0.0.0`; the platform supplies `PORT`. The script removes any app-setting `PORT` override rather than uploading the laptop's `3978`. Startup is `node dist/src/index.js`, with no required `.env` and no PM2 cluster. `npm run start:azure` is the equivalent environment-only manual command. Do not add replicas, autoscale, or multiple workers to this memory-only implementation.
 
-Deployments, restarts, and maintenance lose conversation/auth correlation and can lose acknowledged messages. Host health alone does not prove a working delegated sign-in or WhatsApp reply. Automation coverage includes repeated command runs with simulated provider services, real local server startup/shutdown, Bicep compilation, and a live read-only auth-reuse check, **not a completed live Azure deployment or renewed live Meta run**.
+Deployments, restarts, and maintenance lose conversation/auth correlation and can lose acknowledged messages. Host health alone does not prove a working delegated sign-in or WhatsApp reply. Automated coverage includes repeated command runs with simulated provider services, real local server startup/shutdown, and Bicep compilation. The [live setup checks](#live-setup-verification) below verify additional provider integrations, **not a completed Azure deployment or the full WhatsApp acceptance checklist**.
 
 ### Ownership, failures, and scoped cleanup
 
@@ -173,7 +173,21 @@ Stopping the local command leaves its persistent tunnel registration. Once no lo
 
 `npm test` runs command-level regression tests in temporary copies of the sample. Azure/Meta requests and Azure/Dev Tunnel CLI calls are intercepted by loopback-only fixtures; the relay processes, configuration/ownership files, TypeScript builds, and ZIP packaging are real. Tests repeat setup and inject lost application/password/tunnel/port/webhook/deployment responses, directory replication delays, permission failures, and concurrent auth setup. They do not provision cloud resources or change the developer's real configuration.
 
+### Live setup verification
+
+The following checks have also been run against real provider services, separately from `npm test`:
+
+| Surface | Verified behavior | Remaining boundary |
+| --- | --- | --- |
+| Authentication setup | Fresh Bot/Entra/OAuth provisioning and two reruns retained application, service-principal, and credential identities without rotating secrets. Existing-auth `--reuse` also passed. | Metadata checks do not establish tenant consent or agent access for a newly created sign-in app. |
+| SDK token service | Fresh bot credentials obtained a real sign-in resource; synthetic sign-out and subsequent stale-code rejection succeeded without invoking the agent. | WhatsApp output was captured in memory. No user completed delegated sign-in with the disposable app. |
+| Local startup | Two actual `start:local` runs created/reused the same owned tunnel and port, passed local/public health, refused an unapproved callback replacement, and stopped their children cleanly. | The successful callback-replacement path and subsequent user conversation remain unverified. The original callback was preserved and tunnel default restored. |
+| Webhook boundary | The local relay and existing public callback accepted the verification challenge and a correctly signed empty event, rejected an incorrect verification token with 403, and rejected unsigned/incorrectly signed POSTs with 401. | Empty events do not establish message processing, authentication, or delivery. |
+| Azure deployment preflight | The actual `deploy:azure` entrypoint passed its build, Azure authentication, runtime selection, Bicep compilation, source ZIP packaging, and live Meta validation, then refused paid deployment without approval. | No App Service was provisioned or deployed; hosted startup, deployment reruns, and hosted WhatsApp conversations remain unverified. |
+
 ### Live acceptance checklist (partially completed)
+
+The initial text-link sign-in and multi-turn flow were previously exercised, but the updated button/greeting behavior and media checks remain pending. Real two-user isolation also remains unverified; sequential sign-ins or synthetic sender IDs are not substitutes for a second WhatsApp account.
 
 | Check | Expected result |
 | --- | --- |
