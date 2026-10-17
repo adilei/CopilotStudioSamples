@@ -61,8 +61,13 @@ export async function deployInfrastructure(azure, journal, { appName, planName, 
   const plan = `${azure.groupPath}/providers/Microsoft.Web/serverfarms/${planName}`;
   assertOwned(await azure.optional(site, webVersion), journal.state.owner);
   assertOwned(await azure.optional(plan, webVersion), journal.state.owner);
+  const deploymentName = `whatsapp-relay-${journal.state.owner}`;
+  const deployment = `${azure.groupPath}/providers/Microsoft.Resources/deployments/${deploymentName}`;
+  const previous = await azure.optional(deployment, "2022-09-01");
+  if (previous && !["Succeeded", "Failed", "Canceled"].includes(previous.properties?.provisioningState)) {
+    throw new SetupError(`Azure deployment ${deploymentName} is still active or its status is unknown. Wait for it to finish before retrying; it was not overwritten.`);
+  }
   await azure.group(journal.state.owner);
-  const deployment = `${azure.groupPath}/providers/Microsoft.Resources/deployments/whatsapp-relay-host`;
   const values = { appName, planName, nodeRuntime, owner: journal.state.owner, location: azure.target.location };
   await azure.arm(deployment, { method: "PUT", body: { properties: {
     mode: "Incremental", template,
@@ -72,7 +77,7 @@ export async function deployInfrastructure(azure, journal, { appName, planName, 
     const status = await azure.arm(deployment, {}, "2022-09-01");
     if (status.properties?.provisioningState === "Succeeded") return site;
     if (["Failed", "Canceled"].includes(status.properties?.provisioningState)) {
-      throw new SetupError("The Azure infrastructure deployment failed. Inspect the named deployment in Azure; resources may have been partially created.");
+      throw new SetupError(`Azure deployment ${deploymentName} failed. Inspect it in Azure; resources may have been partially created.`);
     }
     await delay(2000);
   }
@@ -113,9 +118,14 @@ export async function main() {
     infrastructureStarted = true;
     const site = await deployInfrastructure(azure, journal, { appName, planName, nodeRuntime, template });
     const current = await azure.arm(`${site}/config/appsettings/list`, { method: "POST" }, webVersion);
-    await azure.arm(`${site}/config/appsettings`, { method: "PUT", body: {
-      properties: appSettings(current.properties ?? {}, env),
-    } }, webVersion);
+    if (!current?.properties || typeof current.properties !== "object" || Array.isArray(current.properties)) {
+      throw new SetupError("Azure did not return the current app settings; they were not overwritten.");
+    }
+    const desired = appSettings(current.properties, env);
+    if (Object.keys(desired).length !== Object.keys(current.properties).length ||
+        Object.entries(desired).some(([key, value]) => current.properties[key] !== value)) {
+      await azure.arm(`${site}/config/appsettings`, { method: "PUT", body: { properties: desired } }, webVersion);
+    }
     await privateWrite(archive, zip);
     console.log("Deploying source ZIP; App Service will restore/build on Linux. This can take several minutes.");
     await cli("az", [

@@ -37,6 +37,14 @@ test("every command supports offline, credential-free help and dry runs", async 
   }
 });
 
+test("setup entrypoints execute through a directory symlink instead of silently exiting", async t => {
+  const directory = await temporary(t);
+  const link = join(directory, "linked-sample");
+  await symlink(root, link, process.platform === "win32" ? "junction" : "dir");
+  const result = await execute(process.execPath, ["--", join(link, "scripts/auth.mjs"), "--help"], { timeout: 10_000 });
+  assert.match(result.stdout, /npm run setup:auth/);
+});
+
 test("the actual source-only deployment ZIP builds without tests or setup scripts", async t => {
   const directory = await temporary(t);
   const archive = unzipSync(await sourceArchive());

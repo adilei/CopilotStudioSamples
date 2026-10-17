@@ -1,6 +1,6 @@
 import { Azure, assertOwned, azureOptions, target } from "./azure.mjs";
 import {
-  dependencies, guid, isMain, loadEnvironment, options, resourceName, runMain,
+  ApiError, dependencies, guid, isMain, loadEnvironment, options, resourceName, runMain,
   SetupError, stateFile, updateEnvironment,
 } from "./common.mjs";
 
@@ -8,6 +8,18 @@ const provider = "30dd229c-58e3-4a48-bdfd-91ec48eb906c";
 const resourceApp = "8578e004-a5c6-46e7-913e-12f58912df43";
 const invokeScope = "https://api.powerplatform.com/CopilotStudio.Copilots.Invoke";
 const redirect = "https://token.botframework.com/.auth/web/redirect";
+
+async function beginCreation(record, key, save, create) {
+  record[key] = true;
+  await save();
+  try { return await create(); } catch (error) {
+    if (error instanceof ApiError && [400, 401, 403, 404, 422].includes(error.status)) {
+      delete record[key];
+      await save();
+    }
+    throw error;
+  }
+}
 
 async function findApp(azure, filter) {
   const result = await azure.graph(`applications?${new URLSearchParams({
@@ -66,15 +78,26 @@ export async function provisionAuth(azure, journal, envPath, { botName, connecti
     const app = await findApp(azure, state[key] ? `appId eq '${state[key].appId}'` : `displayName eq '${name}'`);
     if (app && app.notes !== marker) throw new SetupError("An Entra application with this name/ID is not owned by this setup.");
     if (state[key] && !app) throw new SetupError("A recorded Entra application was not found. Allow for directory replication, then inspect setup records before retrying.");
-    const selected = app ?? await azure.graph("applications", { method: "POST", body: {
+    const pendingKey = `${key}AppPending`;
+    if (!app && state[pendingKey]) {
+      throw new SetupError("Application creation has an uncertain outcome. Wait for directory replication and inspect the application before retrying; another application was not created.");
+    }
+    if (app && (app.signInAudience !== "AzureADMyOrg" || (key === "oauth" &&
+        (!app.web?.redirectUris?.includes(redirect) ||
+         !app.requiredResourceAccess?.some(resource => resource.resourceAppId === resourceApp &&
+           resource.resourceAccess?.some(permission => permission.id === scope.id && permission.type === "Scope")))))) {
+      throw new SetupError("The owned Entra application's audience, redirect, or invoke permission changed. Restore its configuration before retrying.");
+    }
+    const selected = app ?? await beginCreation(state, pendingKey, save, () => azure.graph("applications", { method: "POST", body: {
       displayName: name, notes: marker, signInAudience: "AzureADMyOrg",
       ...(key === "oauth" ? {
         web: { redirectUris: [redirect] },
         requiredResourceAccess: [{ resourceAppId: resourceApp, resourceAccess: [{ id: scope.id, type: "Scope" }] }],
       } : {}),
-    } });
+    } }));
     if (!selected?.id || !selected.appId) throw new SetupError("Graph did not return the created application identifiers.");
     state[key] ??= { objectId: selected.id, appId: selected.appId };
+    delete state[pendingKey];
     await save();
     const principals = await azure.graph(`servicePrincipals?${new URLSearchParams({ "$filter": `appId eq '${selected.appId}'`, "$select": "id", "$top": "2" })}`);
     if (!Array.isArray(principals?.value) || principals.value.length > 1) throw new SetupError("Service principal lookup was ambiguous.");
@@ -87,11 +110,9 @@ export async function provisionAuth(azure, journal, envPath, { botName, connecti
       if (state[key].credentialId || state[key].credentialPending) {
         throw new SetupError("A credential was previously issued or its outcome is uncertain. Restore the private configuration or rotate it manually; no new secret was generated.");
       }
-      state[key].credentialPending = true;
-      await save();
-      const credential = await azure.graph(`applications/${selected.id}/addPassword`, { method: "POST", body: {
+      const credential = await beginCreation(state[key], "credentialPending", save, () => azure.graph(`applications/${selected.id}/addPassword`, { method: "POST", body: {
         passwordCredential: { displayName: "WhatsApp relay sample", endDateTime: new Date(Date.now() + 90 * 86400_000).toISOString() },
-      } });
+      } }));
       if (!credential?.secretText) throw new SetupError("Graph did not return the generated secret. Inspect the application before retrying.");
       await updateEnvironment(envPath, {
         [secretKey]: credential.secretText, [idKey]: selected.appId,

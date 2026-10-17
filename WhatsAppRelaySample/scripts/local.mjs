@@ -26,10 +26,12 @@ export function tunnelUrl(text) {
 
 export async function ensureTunnel(journal, port, command = cliJson) {
   const { state, save } = journal;
-  const label = `whatsapp-relay-${state.owner}`;
+  const label = `whatsapp-relay-${state.owner.replaceAll("-", "")}`;
   const list = await command("devtunnel", ["list", "--all-labels", label, "--json"]);
-  if (!Array.isArray(list?.tunnels) || list.tunnels.length > 1) throw new SetupError("Tunnel ownership lookup is ambiguous.");
-  let tunnel = list.tunnels[0];
+  // CLI 1.0.1516 reports an empty list as this exact warning instead of an array.
+  const tunnels = list?.warning === "No tunnels found." && Object.keys(list).length === 1 ? [] : list?.tunnels;
+  if (!Array.isArray(tunnels) || tunnels.length > 1) throw new SetupError("Tunnel ownership lookup is ambiguous.");
+  let tunnel = tunnels[0];
   if (state.tunnelId && tunnel?.tunnelId !== state.tunnelId) throw new SetupError("The recorded tunnel was removed, relabeled, or belongs to another account. Inspect .setup/local.json before retrying.");
   if (!tunnel) {
     const created = await command("devtunnel", ["create", `wrelay-${state.owner.replaceAll("-", "")}`, "--allow-anonymous", "--labels", label, "--json"]);
@@ -39,11 +41,15 @@ export async function ensureTunnel(journal, port, command = cliJson) {
   state.tunnelId = tunnel.tunnelId;
   await save();
   const detailed = (await command("devtunnel", ["show", tunnel.tunnelId, "--json"])).tunnel;
-  if (!Array.isArray(detailed?.ports) || detailed.ports.some(p => p.portNumber !== port)) {
+  if (detailed?.tunnelId !== tunnel.tunnelId || !detailed.labels?.includes(label)) {
+    throw new SetupError("Tunnel ownership changed while preparing the port; it was not hosted.");
+  }
+  const ports = detailed.ports ?? [];
+  if (!Array.isArray(ports) || ports.some(p => p.portNumber !== port)) {
     throw new SetupError("This tunnel exposes unexpected ports. Inspect it rather than exposing other local services.");
   }
-  if (!detailed.ports.length) await command("devtunnel", ["port", "create", tunnel.tunnelId, "-p", String(port), "--protocol", "http", "--json"]);
-  else if (!["http", "auto"].includes(detailed.ports[0].protocol)) throw new SetupError("The existing tunnel port is not HTTP.");
+  if (!ports.length) await command("devtunnel", ["port", "create", tunnel.tunnelId, "-p", String(port), "--protocol", "http", "--json"]);
+  else if (!["http", "auto"].includes(ports[0].protocol)) throw new SetupError("The existing tunnel port is not HTTP.");
   return tunnel.tunnelId;
 }
 

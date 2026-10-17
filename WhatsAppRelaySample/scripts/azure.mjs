@@ -34,10 +34,13 @@ export class Azure {
     const cached = this.tokens.get(resource);
     if (cached && cached.until > Date.now()) return cached.token;
     const value = await this.command("az", [
-      "account", "get-access-token", "--tenant", this.target.tenant, "--resource", resource,
+      "account", "get-access-token", "--resource", resource,
       "--subscription", this.target.subscription, "-o", "json", "--only-show-errors",
     ]);
     if (!value?.accessToken) throw new SetupError("Azure CLI did not return a management token.");
+    if (value.tenant?.toLowerCase() !== this.target.tenant || value.subscription?.toLowerCase() !== this.target.subscription) {
+      throw new SetupError("Azure CLI token metadata does not match the requested tenant/subscription.");
+    }
     this.tokens.set(resource, { token: value.accessToken, until: Date.now() + 5 * 60_000 });
     return value.accessToken;
   }

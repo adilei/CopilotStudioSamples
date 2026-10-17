@@ -1,5 +1,6 @@
 import { spawn as nodeSpawn } from "node:child_process";
 import { randomUUID } from "node:crypto";
+import { realpathSync } from "node:fs";
 import { chmod, lstat, mkdir, readFile, rename, rm, writeFile } from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
 import { createInterface } from "node:readline/promises";
@@ -271,7 +272,13 @@ export async function waitForHealth(url, { signal, attempts = 60, fetcher = fetc
   throw new SetupError("The host did not become healthy. Check startup/tunnel status; the webhook was not switched.");
 }
 
-export function isMain(url) { return Boolean(process.argv[1]) && url === pathToFileURL(resolve(process.argv[1])).href; }
+export function isMain(url) {
+  if (!process.argv[1]) return false;
+  try { return url === pathToFileURL(realpathSync(process.argv[1])).href; } catch (error) {
+    if (error.code === "ENOENT" || error.code === "ENOTDIR") return false;
+    throw error;
+  }
+}
 export async function runMain(main) {
   try { await main(); } catch (error) {
     console.error(error instanceof SetupError ? error.message : "Setup failed unexpectedly. Check prerequisites and configuration; private error details were suppressed.");

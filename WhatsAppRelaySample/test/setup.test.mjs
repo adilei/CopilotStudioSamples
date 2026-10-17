@@ -242,15 +242,18 @@ test("Azure binds management login to the explicit tenant/subscription", async (
       calls.push(args);
       if (args[0] === "cloud") return "AzureCloud";
       if (args.includes("show")) return { id: subscription, tenantId: tenant };
-      return { accessToken: "private-token" };
+      return { accessToken: "private-token", tenant, subscription };
     },
     request: async (url, token) => { assert.equal(token, "private-token"); assert.ok(url.startsWith("https://management.azure.com/subscriptions/")); return {}; },
   });
   await azure.connect();
   await azure.arm(azure.groupPath);
   assert.ok(calls.filter(args => args[0] === "account").every(args => args.includes(subscription)));
+  assert.ok(calls.filter(args => args[1] === "get-access-token").every(args => !args.includes("--tenant")));
   const wrong = new Azure(target, { command: async (exe, args) => args[0] === "cloud" ? "AzureCloud" : ({ id: subscription, tenantId: subscription }) });
   await assert.rejects(wrong.connect(), /tenant/);
+  const wrongToken = new Azure(target, { command: async () => ({ accessToken: "private-token", tenant: subscription, subscription }) });
+  await assert.rejects(wrongToken.token("https://management.azure.com/"), /metadata/);
 });
 
 test("Azure absence handling does not hide permission errors or adopt unrelated resources", async () => {
@@ -381,6 +384,17 @@ test("owned tunnels are reused; missing ownership or extra ports is refused", as
   await assert.rejects(ensureTunnel(state, 3978, command), /unexpected ports/);
   state.state.tunnelId = "different";
   await assert.rejects(ensureTunnel(state, 3978, command), /another account/);
+});
+
+test("only the known empty-list warning permits creating a new tunnel", async () => {
+  for (const reply of [{ warning: "Login failed." }, { warning: "No tunnels found.", error: "Forbidden" }, {}]) {
+    const calls = [];
+    await assert.rejects(ensureTunnel(journal(), 3978, async (exe, args) => {
+      calls.push(args);
+      return reply;
+    }), /ambiguous/);
+    assert.equal(calls.length, 1);
+  }
 });
 
 test("child failure aborts supervision; cleanup terminates only tracked children", async () => {
