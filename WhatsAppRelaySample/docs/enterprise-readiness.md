@@ -1,10 +1,14 @@
 # From a lightweight relay to an enterprise service
 
+[Sample overview](../README.md) | [Setup and deployment](deployment.md)
+
 This is a **reference architecture, not an implemented deployment option**. The sample remains one Node process with volatile queues, authentication correlation, conversation mappings, deduplication, and media buffers. Its App Service template adds hosting convenience, not durability. Even a healthy, Always On instance can lose messages it has already acknowledged during deployment, maintenance, a crash, or restart.
 
 ## What is already protected
 
 The sample verifies Meta's raw-body HMAC before admission, checks the receiving WABA/phone, bounds requests and work, serializes each sender, separates delegated identities, enforces authentication expiry, and cancels bounded operations. It avoids blind retries after uncertain agent or Meta outcomes. Downloaded files are bounded and checked; logs avoid conversation bodies and credentials.
+
+Each sender has a separate SDK identity, SDK `MemoryStorage` instance, and GHCP conversation state, keyed by WABA, receiving number, and sender. To support restarts and multiple workers, persist these per-sender records in durable storage and enforce the same user isolation whenever a worker restores a session.
 
 These controls do not provide durable acceptance, distributed ownership, replay recovery, comprehensive malware detection, a secret-management lifecycle, or a production operational model. `/health` reports process liveness, not downstream readiness or delivery success.
 
@@ -36,7 +40,7 @@ Persist an explicit, versioned state machine covering:
 
 | State | Why it matters |
 | --- | --- |
-| Stable SDK user/conversation identity and SDK authorization state | A new random identity on each worker/restart cannot recover the existing OAuth correlation. Use a reviewed shared SDK storage implementation, not serialized in-process client objects. |
+| Stable SDK user/conversation identity and SDK authorization state | A new random identity on each worker/restart cannot recover the existing OAuth correlation. Use reviewed durable SDK storage partitioned by scoped sender identity, not serialized in-process client objects. |
 | Pending-auth correlation, original request metadata, and expiry | Successful code validation must resume the correct original request exactly once within the intended lifecycle, not treat the code as a new prompt. |
 | GHCP conversation ID and turn/checkpoint status | Distinguish active, completed, failed, and uncertain remote turns after recovery. |
 | Session generation, idle expiry, reset, and sign-out state | Prevent a delayed callback or old queue job from resurrecting a reset/signed-out session. Coordinate SDK token-service sign-out with durable state transitions and recover partial failures. |
