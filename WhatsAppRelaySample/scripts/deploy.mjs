@@ -2,7 +2,7 @@ import { lstat, readdir, readFile, rm } from "node:fs/promises";
 import { join } from "node:path";
 import { Azure, assertOwned, azureOptions, target } from "./azure.mjs";
 import {
-  cli, cliJson, confirm, dependencies, isMain, loadEnvironment, npm, options,
+  cliJson, confirm, dependencies, isMain, loadEnvironment, npm, options,
   privateWrite, required, resourceName, root, runMain, runtimeKeys, setupDir,
   SetupError, stateFile, validateRuntime, waitForHealth,
 } from "./common.mjs";
@@ -128,11 +128,14 @@ export async function main() {
     }
     await privateWrite(archive, zip);
     console.log("Deploying source ZIP; App Service will restore/build on Linux. This can take several minutes.");
-    await cli("az", [
+    const sourceDeployment = await cliJson("az", [
       "webapp", "deploy", "--subscription", selected.subscription, "--resource-group", selected.group,
       "--name", appName, "--src-path", archive, "--type", "zip", "--timeout", "600000",
-      "--only-show-errors", "--output", "none",
+      "--async", "true", "--track-status", "false", "--only-show-errors", "--output", "json",
     ], { timeoutMs: 660_000 });
+    if (sourceDeployment?.status !== 4) {
+      throw new SetupError("Source deployment did not confirm a successful build. Inspect App Service deployment history before retrying.");
+    }
     const app = await azure.arm(site, {}, webVersion);
     const hostname = app.properties?.defaultHostName;
     if (typeof hostname !== "string" || !/^[a-z0-9.-]+\.azurewebsites\.net$/i.test(hostname)) throw new SetupError("Azure returned an unexpected public hostname.");

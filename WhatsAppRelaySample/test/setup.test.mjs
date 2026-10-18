@@ -443,6 +443,46 @@ test("local webhook refusal stops both owned processes and never claims readines
   assert.equal(signals.listenerCount("SIGINT"), 0);
 });
 
+test("local cancellation keeps signal handlers until owned children close", async () => {
+  const children = [], signals = new EventEmitter();
+  let configured, stopping;
+  const ready = new Promise(resolve => { configured = resolve; });
+  const cleanupStarted = new Promise(resolve => { stopping = resolve; });
+  const running = runServices({
+    env: {}, config: { port: 3978 }, tunnelId: "friendly.uks1", signals,
+    launch: async () => {
+      const process = child();
+      process.kill = signal => {
+        process.kills.push(signal);
+        if (children.every(value => value.kills.length)) stopping();
+        return true;
+      };
+      children.push(process);
+      if (children.length === 2) process.stdout.write("Connect via browser: https://alias-3978.uks1.devtunnels.ms\n");
+      return process;
+    },
+    health: async () => {},
+    meta: { configure: async () => { configured(); } },
+  });
+  await ready;
+  signals.emit("SIGINT");
+  await cleanupStarted;
+  try {
+    assert.equal(signals.listenerCount("SIGINT"), 1);
+    assert.equal(signals.listenerCount("SIGTERM"), 1);
+    signals.emit("SIGINT");
+    signals.emit("SIGTERM");
+    assert.equal(signals.listenerCount("SIGINT"), 1);
+    assert.equal(signals.listenerCount("SIGTERM"), 1);
+    assert.ok(children.every(process => process.kills.length === 1));
+  } finally {
+    for (const process of children) process.emit("close", 0);
+    await running;
+  }
+  assert.equal(signals.listenerCount("SIGINT"), 0);
+  assert.equal(signals.listenerCount("SIGTERM"), 0);
+});
+
 test("deployment settings exclude local port and management secrets while retaining unrelated settings", () => {
   const settings = appSettings({ KEEP: "value", PORT: "3978" }, {
     BOT_CLIENT_SECRET: "runtime-secret", BOT_OAUTH_CLIENT_SECRET: "management-secret", PORT: "3978", PATH: "local",

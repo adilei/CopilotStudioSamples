@@ -101,8 +101,8 @@ export async function runServices({ env, config, tunnelId, meta, replace, launch
   const requestedStop = new SetupError("Local runner stopped.");
   const stop = () => controller.abort(requestedStop);
   const cleanup = [];
-  signals.once("SIGINT", stop);
-  signals.once("SIGTERM", stop);
+  signals.on("SIGINT", stop);
+  signals.on("SIGTERM", stop);
   try {
     const relay = await launch(process.execPath, [join(root, "dist/src/index.js")], {
       env: { ...process.env, ...Object.fromEntries(runtimeKeys.map(key => [key, env[key] ?? ""])),
@@ -127,9 +127,12 @@ export async function runServices({ env, config, tunnelId, meta, replace, launch
   } catch (error) {
     if (error !== requestedStop) throw error;
   } finally {
-    signals.off("SIGINT", stop);
-    signals.off("SIGTERM", stop);
-    await Promise.all(cleanup.map(stopChild => stopChild()));
+    try {
+      await Promise.all(cleanup.map(stopChild => stopChild()));
+    } finally {
+      signals.off("SIGINT", stop);
+      signals.off("SIGTERM", stop);
+    }
   }
 }
 

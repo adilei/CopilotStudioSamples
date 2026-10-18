@@ -125,9 +125,12 @@ function services() {
       if (args[0] === "bicep") return json({ resources: [] });
       if (args[1] === "list-runtimes") return json(["NODE:22-lts"]);
       if (args[1] === "deploy") {
+        assert.equal(args[args.indexOf("--async") + 1], "true");
+        assert.equal(args[args.indexOf("--track-status") + 1], "false");
+        assert.equal(args[args.indexOf("--output") + 1], "json");
         assert.ok(files.includes("src/index.ts") && files.includes("package-lock.json"));
         assert.ok(files.every(path => /^(src\/.*\.ts|package(?:-lock)?\.json|tsconfig\.json)$/.test(path)));
-        return { stdout: "" };
+        return json(state.sourceDeployment ?? { status: 4 });
       }
     }
     if (command === "devtunnel") {
@@ -353,4 +356,27 @@ test("deployment reruns converge on the same resources and do not overwrite in-f
   assert.equal(saved.PORT, undefined);
   assert.equal(saved.BOT_OAUTH_CLIENT_SECRET, undefined);
   assert.equal(saved.BOT_CLIENT_ID, parseEnv(await readFile(join(f.directory, ".env"), "utf8")).BOT_CLIENT_ID);
+});
+
+test("source deployment requires terminal build success before health or Meta configuration", async t => {
+  const f = await fixture(t);
+  const auth = await f.run("auth", [...target, "--bot", "test-bot"]);
+  assert.equal(auth.code, 0, auth.stderr);
+  const args = [...target, "--app", "test-relay", "--plan", "test-plan", "--accept-cost"];
+  for (const sourceDeployment of [{ status: 1 }, { status: 3 }, {}]) {
+    f.state.sourceDeployment = sourceDeployment;
+    const start = f.state.calls.length;
+    const result = await f.run("deploy", args);
+    assert.equal(result.code, 1);
+    assert.match(result.stderr, /did not confirm a successful build/);
+    assert.ok(!f.state.calls.slice(start).some(call =>
+      call.type === "http" && new URL(call.url).hostname === "test-relay.azurewebsites.net"));
+    assert.equal(f.state.subscriptions.length, 0);
+    assert.equal(f.state.installed, false);
+  }
+  f.state.sourceDeployment = { status: 4 };
+  const result = await f.run("deploy", args);
+  assert.equal(result.code, 0, result.stderr);
+  assert.equal(f.state.subscriptions.length, 1);
+  assert.equal(f.state.installed, true);
 });

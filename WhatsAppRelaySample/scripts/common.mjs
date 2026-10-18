@@ -180,8 +180,8 @@ export async function cli(executable, args, { interactive = false, timeoutMs } =
   const child = await spawnTool(executable, args, { stdio: interactive ? "inherit" : "pipe" });
   return capture(child, executable, timeoutMs);
 }
-export async function cliJson(executable, args) {
-  const output = await cli(executable, args);
+export async function cliJson(executable, args, opts) {
+  const output = await cli(executable, args, opts);
   try { return JSON.parse(output); } catch { throw new SetupError(`${executable} did not return valid JSON.`); }
 }
 
